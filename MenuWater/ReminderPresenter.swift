@@ -34,7 +34,7 @@ final class ReminderPresenter {
             let visibleFrame = screen.visibleFrame
             targetOrigin = NSPoint(
                 x: visibleFrame.midX - contentSize.width / 2,
-                y: visibleFrame.maxY - contentSize.height - (hasDisplayNotch ? 24 : 4)
+                y: visibleFrame.maxY - contentSize.height - (hasDisplayNotch ? 18 : 0)
             )
         } else {
             targetOrigin = .zero
@@ -99,7 +99,7 @@ private struct WaterReminderPill: View {
                     .foregroundStyle(.blue)
 
                 Text("Time to drink water")
-                    .font(.body.weight(.semibold))
+                    .font(.title3.weight(.semibold))
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

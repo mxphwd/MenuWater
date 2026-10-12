@@ -3,15 +3,56 @@ import Observation
 import ServiceManagement
 
 enum VolumeUnit: String, CaseIterable, Identifiable {
-    case milliliters
-    case ounces
+    case metric
+    case imperial
+    case american
 
     var id: Self { self }
 
     var symbol: String {
         switch self {
-        case .milliliters: "ml"
-        case .ounces: "oz"
+        case .metric:
+            "ml"
+        case .imperial, .american:
+            "oz"
+        }
+    }
+
+    var displayName: LocalizedStringResource {
+        switch self {
+        case .metric:
+            "ml (Metric)"
+        case .imperial:
+            "oz (Imperial)"
+        case .american:
+            "oz (American)"
+        }
+    }
+
+    var millilitersPerUnit: Double {
+        switch self {
+        case .metric:
+            1
+        case .imperial:
+            28.413_062_5
+        case .american:
+            29.573_529_562_5
+        }
+    }
+}
+
+enum ProfileGender: String, CaseIterable, Identifiable {
+    case female
+    case male
+
+    var id: Self { self }
+
+    var displayName: LocalizedStringResource {
+        switch self {
+        case .female:
+            "Female"
+        case .male:
+            "Male"
         }
     }
 }
@@ -26,6 +67,8 @@ final class HydrationModel {
         static let volumeML = "container.volumeML"
         static let unit = "container.unit"
         static let hasDisplayNotch = "display.hasNotch"
+        static let age = "profile.age"
+        static let gender = "profile.gender"
     }
 
     var count: Int
@@ -34,6 +77,8 @@ final class HydrationModel {
     var volumeUnit: VolumeUnit
     var launchAtLogin: Bool
     var hasDisplayNotch: Bool
+    var age: Int
+    var gender: ProfileGender
     var errorMessage: String?
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -48,9 +93,11 @@ final class HydrationModel {
         count = defaults.integer(forKey: Keys.count)
         intervalMinutes = defaults.object(forKey: Keys.interval) as? Int ?? 60
         volumeML = defaults.object(forKey: Keys.volumeML) as? Double ?? 350
-        volumeUnit = VolumeUnit(rawValue: defaults.string(forKey: Keys.unit) ?? "") ?? .milliliters
+        volumeUnit = Self.savedVolumeUnit(from: defaults)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         hasDisplayNotch = defaults.bool(forKey: Keys.hasDisplayNotch)
+        age = defaults.object(forKey: Keys.age) as? Int ?? 30
+        gender = ProfileGender(rawValue: defaults.string(forKey: Keys.gender) ?? "") ?? .female
 
         resetIfNeeded()
         scheduleMidnightReset()
@@ -62,20 +109,33 @@ final class HydrationModel {
     }
 
     var displayedContainerVolume: Double {
-        switch volumeUnit {
-        case .milliliters:
-            volumeML
-        case .ounces:
-            volumeML / 29.5735
-        }
+        volumeML / volumeUnit.millilitersPerUnit
     }
 
     var displayedTotal: Double {
-        switch volumeUnit {
-        case .milliliters:
-            totalML
-        case .ounces:
-            totalML / 29.5735
+        totalML / volumeUnit.millilitersPerUnit
+    }
+
+    var displayedDailyGoal: Double {
+        dailyGoalML / volumeUnit.millilitersPerUnit
+    }
+
+    var hasReachedDailyGoal: Bool {
+        totalML >= dailyGoalML
+    }
+
+    private var dailyGoalML: Double {
+        switch age {
+        case ...3:
+            900
+        case 4...8:
+            1_200
+        case 9...13:
+            gender == .male ? 1_800 : 1_600
+        case 14...18:
+            gender == .male ? 2_600 : 1_800
+        default:
+            gender == .male ? 3_000 : 2_200
         }
     }
 
@@ -98,18 +158,23 @@ final class HydrationModel {
     }
 
     func updateVolume(_ displayedValue: Double) {
-        switch volumeUnit {
-        case .milliliters:
-            volumeML = displayedValue
-        case .ounces:
-            volumeML = displayedValue * 29.5735
-        }
+        volumeML = displayedValue * volumeUnit.millilitersPerUnit
         defaults.set(volumeML, forKey: Keys.volumeML)
     }
 
     func updateUnit(_ unit: VolumeUnit) {
         volumeUnit = unit
         defaults.set(unit.rawValue, forKey: Keys.unit)
+    }
+
+    func updateAge(_ newAge: Int) {
+        age = newAge
+        defaults.set(newAge, forKey: Keys.age)
+    }
+
+    func updateGender(_ newGender: ProfileGender) {
+        gender = newGender
+        defaults.set(newGender.rawValue, forKey: Keys.gender)
     }
 
     func updateDisplayNotch(_ enabled: Bool) {
@@ -139,6 +204,20 @@ final class HydrationModel {
 
     func showReminderNow() {
         reminderPresenter.show(hasDisplayNotch: hasDisplayNotch)
+    }
+
+    private static func savedVolumeUnit(from defaults: UserDefaults) -> VolumeUnit {
+        let savedValue = defaults.string(forKey: Keys.unit)
+
+        if savedValue == "ounces" {
+            return .american
+        }
+
+        if savedValue == "milliliters" {
+            return .metric
+        }
+
+        return VolumeUnit(rawValue: savedValue ?? "") ?? .metric
     }
 
     private func resetIfNeeded() {
