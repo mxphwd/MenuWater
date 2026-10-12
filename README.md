@@ -11,7 +11,7 @@ Before start using MenuWater, navigate to **Options** under the drop down menu t
 
 ## Setup guide
 
-1. Download the [latest release](https://github.com/mxphwd/MenuWater/releases/new).
+1. Download the [latest release](https://github.com/mxphwd/MenuWater/releases/).
 2. Extract the .zip file and move the .app file to Applications folders or whichever folder you are comfortable running the application in.
 3. Double-click the .app file to open.
 4. Click "OK" to dismiss the warning.
