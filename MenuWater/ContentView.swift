@@ -239,18 +239,11 @@ private struct ContainerSettings: View {
                     onGenderChange: onGenderChange,
                     onUnitChange: onUnitChange,
                     onDisplayNotchChange: onDisplayNotchChange,
-                    onLaunchAtLoginChange: onLaunchAtLoginChange
+                    onLaunchAtLoginChange: onLaunchAtLoginChange,
+                    onTestNow: onTryNow
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
-
-#if DEBUG
-            Button(action: onTryNow) {
-                SettingsRowLabel(title: "Try now", systemImage: "play.fill")
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-#endif
         }
     }
 
@@ -278,6 +271,7 @@ private struct PersonalOptions: View {
     let onUnitChange: (VolumeUnit) -> Void
     let onDisplayNotchChange: (Bool) -> Void
     let onLaunchAtLoginChange: (Bool) -> Void
+    let onTestNow: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -336,6 +330,12 @@ private struct PersonalOptions: View {
             Text("Daily goal is a general estimate.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+
+            Button(action: onTestNow) {
+                SettingsRowLabel(title: "Test it now", systemImage: "play.fill")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
         }
     }
 }
