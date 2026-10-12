@@ -27,8 +27,10 @@ struct ContentView: View {
             ContainerSettings(
                 displayedVolume: model.displayedContainerVolume,
                 unit: model.volumeUnit,
+                hasDisplayNotch: model.hasDisplayNotch,
                 onVolumeChange: model.updateVolume,
                 onUnitChange: model.updateUnit,
+                onDisplayNotchChange: model.updateDisplayNotch,
                 onTryNow: model.showReminderNow
             )
 
@@ -145,26 +147,28 @@ private struct ReminderControls: View {
 private struct ContainerSettings: View {
     let displayedVolume: Double
     let unit: VolumeUnit
+    let hasDisplayNotch: Bool
     let onVolumeChange: (Double) -> Void
     let onUnitChange: (VolumeUnit) -> Void
+    let onDisplayNotchChange: (Bool) -> Void
     let onTryNow: () -> Void
 
-    @State private var isExpanded = false
+    @State private var isContainerExpanded = false
+    @State private var isOptionsExpanded = false
 
     var body: some View {
         VStack(spacing: 10) {
             Button {
                 withAnimation(.snappy) {
-                    isExpanded.toggle()
+                    isContainerExpanded.toggle()
                 }
             } label: {
-                Label("Container size", systemImage: "gearshape")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsRowLabel(title: "Container size", systemImage: "waterbottle")
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
 
-            if isExpanded {
+            if isContainerExpanded {
                 HStack {
                     Stepper(
                         value: Binding(
@@ -196,11 +200,33 @@ private struct ContainerSettings: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
+            Button {
+                withAnimation(.snappy) {
+                    isOptionsExpanded.toggle()
+                }
+            } label: {
+                SettingsRowLabel(title: "Options", systemImage: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+
+            if isOptionsExpanded {
+                Toggle(
+                    "Display has notch",
+                    isOn: Binding(
+                        get: { hasDisplayNotch },
+                        set: onDisplayNotchChange
+                    )
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
 #if DEBUG
-            Button("Try now", action: onTryNow)
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onTryNow) {
+                SettingsRowLabel(title: "Try now", systemImage: "play.fill")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
 #endif
         }
     }
@@ -214,6 +240,21 @@ private struct ContainerSettings: View {
 
     private var volumeStep: Double {
         unit == .milliliters ? 50 : 1
+    }
+}
+
+private struct SettingsRowLabel: View {
+    let title: LocalizedStringResource
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .frame(width: 16)
+
+            Text(title)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

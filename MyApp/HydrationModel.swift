@@ -25,6 +25,7 @@ final class HydrationModel {
         static let interval = "reminder.interval"
         static let volumeML = "container.volumeML"
         static let unit = "container.unit"
+        static let hasDisplayNotch = "display.hasNotch"
     }
 
     var count: Int
@@ -32,6 +33,7 @@ final class HydrationModel {
     var volumeML: Double
     var volumeUnit: VolumeUnit
     var launchAtLogin: Bool
+    var hasDisplayNotch: Bool
     var errorMessage: String?
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -48,6 +50,7 @@ final class HydrationModel {
         volumeML = defaults.object(forKey: Keys.volumeML) as? Double ?? 350
         volumeUnit = VolumeUnit(rawValue: defaults.string(forKey: Keys.unit) ?? "") ?? .milliliters
         launchAtLogin = SMAppService.mainApp.status == .enabled
+        hasDisplayNotch = defaults.bool(forKey: Keys.hasDisplayNotch)
 
         resetIfNeeded()
         scheduleMidnightReset()
@@ -109,6 +112,11 @@ final class HydrationModel {
         defaults.set(unit.rawValue, forKey: Keys.unit)
     }
 
+    func updateDisplayNotch(_ enabled: Bool) {
+        hasDisplayNotch = enabled
+        defaults.set(enabled, forKey: Keys.hasDisplayNotch)
+    }
+
     func updateLaunchAtLogin(_ enabled: Bool) {
         do {
             if enabled {
@@ -130,7 +138,7 @@ final class HydrationModel {
     }
 
     func showReminderNow() {
-        reminderPresenter.show()
+        reminderPresenter.show(hasDisplayNotch: hasDisplayNotch)
     }
 
     private func resetIfNeeded() {
@@ -158,7 +166,10 @@ final class HydrationModel {
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.reminderPresenter.show()
+                guard let self else {
+                    return
+                }
+                self.reminderPresenter.show(hasDisplayNotch: self.hasDisplayNotch)
             }
         }
 

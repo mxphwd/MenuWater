@@ -5,10 +5,10 @@ import SwiftUI
 final class ReminderPresenter {
     private var panel: NSPanel?
 
-    func show() {
-        dismiss()
+    func show(hasDisplayNotch: Bool) {
+        dismissImmediately()
 
-        let contentSize = NSSize(width: 360, height: 82)
+        let contentSize = NSSize(width: 250, height: 50)
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -29,22 +29,55 @@ final class ReminderPresenter {
             }
         )
 
+        let targetOrigin: NSPoint
         if let screen = NSScreen.main {
             let visibleFrame = screen.visibleFrame
-            let origin = NSPoint(
+            targetOrigin = NSPoint(
                 x: visibleFrame.midX - contentSize.width / 2,
-                y: visibleFrame.maxY - contentSize.height - 18
+                y: visibleFrame.maxY - contentSize.height - (hasDisplayNotch ? 24 : 4)
             )
-            panel.setFrameOrigin(origin)
         } else {
-            panel.center()
+            targetOrigin = .zero
         }
+
+        panel.setFrameOrigin(
+            NSPoint(x: targetOrigin.x, y: targetOrigin.y + 10)
+        )
+        panel.alphaValue = 0
 
         self.panel = panel
         panel.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.5
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrameOrigin(targetOrigin)
+        }
     }
 
     func dismiss() {
+        guard let panel else {
+            return
+        }
+
+        self.panel = nil
+        let exitOrigin = NSPoint(
+            x: panel.frame.origin.x,
+            y: panel.frame.origin.y + 8
+        )
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.45
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            panel.animator().alphaValue = 0
+            panel.animator().setFrameOrigin(exitOrigin)
+        } completionHandler: {
+            panel.orderOut(nil)
+        }
+    }
+
+    private func dismissImmediately() {
         panel?.orderOut(nil)
         panel = nil
     }
@@ -60,29 +93,36 @@ private struct WaterReminderPill: View {
             Capsule()
                 .fill(.regularMaterial)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Image(systemName: "drop.fill")
-                    .font(.title2)
+                    .font(.body)
                     .foregroundStyle(.blue)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Time to drink water")
-                        .font(.headline)
-
-                    Text("Take a moment for a refreshing sip.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
+                Text("Time to drink water")
+                    .font(.body.weight(.semibold))
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 2)
 
             GeometryReader { geometry in
                 Rectangle()
-                    .fill(.blue)
-                    .frame(width: geometry.size.width * progress, height: 6)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .blue.opacity(0.7),
+                                .cyan,
+                                .white.opacity(0.9),
+                                .blue
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: .cyan.opacity(0.75), radius: 3, y: -1)
+                    .shadow(color: .blue.opacity(0.45), radius: 6, y: -1)
+                    .frame(width: geometry.size.width * progress, height: 2.5)
                     .frame(maxHeight: .infinity, alignment: .bottomLeading)
             }
         }
@@ -113,6 +153,6 @@ private struct WaterReminderPill: View {
 
 #Preview {
     WaterReminderPill {}
-        .frame(width: 360, height: 82)
+        .frame(width: 250, height: 50)
         .padding()
 }
