@@ -336,7 +336,7 @@ private struct PersonalOptions: View {
             )
 
             Toggle(
-                "Full-screen reminder",
+                "Full-screen shade",
                 isOn: Binding(
                     get: { fullScreenReminder },
                     set: onFullScreenReminderChange

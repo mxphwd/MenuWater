@@ -3,14 +3,30 @@ import SwiftUI
 
 @MainActor
 final class ReminderPresenter {
-    private var panel: NSPanel?
+    private struct Presentation {
+        let id: UUID
+        let panel: NSPanel
+        let movesVertically: Bool
+    }
+
+    private enum Animation {
+        static let openingDuration = 0.32
+        static let closingDuration = 0.25
+        static let verticalOffset: CGFloat = 6
+    }
+
+    private var presentation: Presentation?
+    private var localKeyMonitor: Any?
+    private var globalKeyMonitor: Any?
 
     func show(hasDisplayNotch: Bool, fullScreen: Bool) {
         dismissImmediately()
 
         let contentSize = NSSize(width: 250, height: 50)
         let screen = NSScreen.main
-        let panelFrame = fullScreen ? (screen?.frame ?? NSRect(origin: .zero, size: contentSize)) : NSRect(origin: .zero, size: contentSize)
+        let compactFrame = NSRect(origin: .zero, size: contentSize)
+        let panelFrame = fullScreen ? (screen?.frame ?? compactFrame) : compactFrame
+        let presentationID = UUID()
         let panel = NSPanel(
             contentRect: panelFrame,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -27,8 +43,8 @@ final class ReminderPresenter {
         panel.isMovable = false
         panel.ignoresMouseEvents = fullScreen
 
-        let reminderPill = WaterReminderPill {
-            self.dismiss()
+        let reminderPill = WaterReminderPill { [weak self] in
+            self?.dismiss(presentationID: presentationID)
         }
 
         if fullScreen {
@@ -56,48 +72,104 @@ final class ReminderPresenter {
 
         if !fullScreen {
             panel.setFrameOrigin(
-                NSPoint(x: targetOrigin.x, y: targetOrigin.y + 10)
+                NSPoint(
+                    x: targetOrigin.x,
+                    y: targetOrigin.y + Animation.verticalOffset
+                )
             )
         }
         panel.alphaValue = 0
 
-        self.panel = panel
+        presentation = Presentation(
+            id: presentationID,
+            panel: panel,
+            movesVertically: !fullScreen
+        )
+        startEscapeMonitoring(presentationID: presentationID)
         panel.orderFrontRegardless()
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.5
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.duration = Animation.openingDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
+
             if !fullScreen {
                 panel.animator().setFrameOrigin(targetOrigin)
             }
         }
     }
 
-    func dismiss() {
-        guard let panel else {
+    private func dismiss(presentationID: UUID) {
+        guard let presentation, presentation.id == presentationID else {
             return
         }
 
-        self.panel = nil
-        let shouldMove = panel.frame.size == NSSize(width: 250, height: 50)
-        let exitOrigin = NSPoint(x: panel.frame.origin.x, y: panel.frame.origin.y + 8)
+        self.presentation = nil
+        stopEscapeMonitoring()
+
+        let panel = presentation.panel
+        let exitOrigin = NSPoint(
+            x: panel.frame.origin.x,
+            y: panel.frame.origin.y + Animation.verticalOffset
+        )
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.45
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.duration = Animation.closingDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().alphaValue = 0
-            if shouldMove {
+
+            if presentation.movesVertically {
                 panel.animator().setFrameOrigin(exitOrigin)
             }
         } completionHandler: {
             panel.orderOut(nil)
+            panel.contentView = nil
         }
     }
 
     private func dismissImmediately() {
-        panel?.orderOut(nil)
-        panel = nil
+        guard let presentation else {
+            return
+        }
+
+        self.presentation = nil
+        stopEscapeMonitoring()
+        presentation.panel.contentView = nil
+        presentation.panel.orderOut(nil)
+    }
+
+    private func startEscapeMonitoring(presentationID: UUID) {
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            if event.keyCode == 53 {
+                self?.dismiss(presentationID: presentationID)
+            }
+
+            return event
+        }
+
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            guard event.keyCode == 53 else {
+                return
+            }
+
+            Task { @MainActor [weak self] in
+                self?.dismiss(presentationID: presentationID)
+            }
+        }
+    }
+
+    private func stopEscapeMonitoring() {
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+            self.localKeyMonitor = nil
+        }
+
+        if let globalKeyMonitor {
+            NSEvent.removeMonitor(globalKeyMonitor)
+            self.globalKeyMonitor = nil
+        }
     }
 }
 
@@ -107,11 +179,7 @@ private struct FullScreenReminderOverlay<Pill: View>: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.blue.opacity(0.9), lineWidth: 2.5)
-                .shadow(color: .cyan.opacity(0.9), radius: 5)
-                .shadow(color: .blue.opacity(0.65), radius: 10)
-                .padding(4)
+            Color.black.opacity(0.50)
 
             pill
                 .frame(width: 250, height: 50)
