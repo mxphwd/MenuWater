@@ -5,7 +5,7 @@ Built for those who keep forgets to drink water during the day.
 Features:
 + Built natively for Apple Silicon
 + Very lightweight
-+ Option to auto start at login
++ ~~Option to auto start at login~~
 
 The application is built and tested for macOS 26 Golden Gate. Although Xcode deploy target is set down to macOS 14.6 Sonoma or later, it is not tested in any older versions and therefore your usage may vary.
 
