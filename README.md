@@ -19,3 +19,10 @@ Before start using MenuWater, navigate to **Options** under the drop down menu t
 6. Scroll down to find the section stating ""MenuWater" was blocked to protect your Mac".
 7. Click **Open Anyway**
 8. Authenticate using Touch ID or your Mac password.
+
+## Known issues
+
++ There is a known bug that, in certain cases, having the "Start at login" option on may result in MenuWater crashing, leaving the icon visible on the menu bar but not open when clicked on. You can relaunch MenuWater by force quitting the application from the Force Quit menu(Opt+Cmd+Esc).
++ Users on macOS 27 Golden Gate using [HiddenBar](https://github.com/dwarvesf/hidden) may experience the menu bar icon disappearing as HiddenBar hides selected applications, even if MenuWater is specifically selected to be not hidden.
+
+Feel free to add more issues as you find them
