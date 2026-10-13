@@ -28,3 +28,8 @@ Before start using MenuWater, navigate to **Options** under the drop down menu t
 + Users on macOS 27 Golden Gate using [HiddenBar](https://github.com/dwarvesf/hidden) may experience the menu bar icon disappearing as HiddenBar hides selected applications, even if MenuWater is specifically selected to be not hidden. This is a problem caused by new behavior macOS handles menu bar combined with updated HiddenBar to still provide the hiding feature. Although not tested, users on macOS 26 Tahoe or older will probably have no problem with this.
 
 Feel free to add more issues as you find them
+
+## Update log
+
+**v1.0.1**
++ Full-screen mode added.
