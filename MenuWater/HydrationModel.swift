@@ -67,6 +67,7 @@ final class HydrationModel {
         static let volumeML = "container.volumeML"
         static let unit = "container.unit"
         static let hasDisplayNotch = "display.hasNotch"
+        static let fullScreenReminder = "reminder.fullScreen"
         static let age = "profile.age"
         static let gender = "profile.gender"
     }
@@ -77,6 +78,7 @@ final class HydrationModel {
     var volumeUnit: VolumeUnit
     var launchAtLogin: Bool
     var hasDisplayNotch: Bool
+    var fullScreenReminder: Bool
     var age: Int
     var gender: ProfileGender
     var errorMessage: String?
@@ -96,6 +98,7 @@ final class HydrationModel {
         volumeUnit = Self.savedVolumeUnit(from: defaults)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         hasDisplayNotch = defaults.bool(forKey: Keys.hasDisplayNotch)
+        fullScreenReminder = defaults.bool(forKey: Keys.fullScreenReminder)
         age = defaults.object(forKey: Keys.age) as? Int ?? 30
         gender = ProfileGender(rawValue: defaults.string(forKey: Keys.gender) ?? "") ?? .female
 
@@ -182,6 +185,11 @@ final class HydrationModel {
         defaults.set(enabled, forKey: Keys.hasDisplayNotch)
     }
 
+    func updateFullScreenReminder(_ enabled: Bool) {
+        fullScreenReminder = enabled
+        defaults.set(enabled, forKey: Keys.fullScreenReminder)
+    }
+
     func updateLaunchAtLogin(_ enabled: Bool) {
         do {
             if enabled {
@@ -203,7 +211,10 @@ final class HydrationModel {
     }
 
     func showReminderNow() {
-        reminderPresenter.show(hasDisplayNotch: hasDisplayNotch)
+        reminderPresenter.show(
+            hasDisplayNotch: hasDisplayNotch,
+            fullScreen: fullScreenReminder
+        )
     }
 
     private static func savedVolumeUnit(from defaults: UserDefaults) -> VolumeUnit {
@@ -248,7 +259,10 @@ final class HydrationModel {
                 guard let self else {
                     return
                 }
-                self.reminderPresenter.show(hasDisplayNotch: self.hasDisplayNotch)
+                self.reminderPresenter.show(
+                    hasDisplayNotch: self.hasDisplayNotch,
+                    fullScreen: self.fullScreenReminder
+                )
             }
         }
 

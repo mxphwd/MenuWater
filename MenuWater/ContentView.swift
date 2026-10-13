@@ -28,12 +28,14 @@ struct ContentView: View {
                 displayedVolume: model.displayedContainerVolume,
                 unit: model.volumeUnit,
                 hasDisplayNotch: model.hasDisplayNotch,
+                fullScreenReminder: model.fullScreenReminder,
                 launchAtLogin: model.launchAtLogin,
                 age: model.age,
                 gender: model.gender,
                 onVolumeChange: model.updateVolume,
                 onUnitChange: model.updateUnit,
                 onDisplayNotchChange: model.updateDisplayNotch,
+                onFullScreenReminderChange: model.updateFullScreenReminder,
                 onLaunchAtLoginChange: model.updateLaunchAtLogin,
                 onAgeChange: model.updateAge,
                 onGenderChange: model.updateGender,
@@ -168,12 +170,14 @@ private struct ContainerSettings: View {
     let displayedVolume: Double
     let unit: VolumeUnit
     let hasDisplayNotch: Bool
+    let fullScreenReminder: Bool
     let launchAtLogin: Bool
     let age: Int
     let gender: ProfileGender
     let onVolumeChange: (Double) -> Void
     let onUnitChange: (VolumeUnit) -> Void
     let onDisplayNotchChange: (Bool) -> Void
+    let onFullScreenReminderChange: (Bool) -> Void
     let onLaunchAtLoginChange: (Bool) -> Void
     let onAgeChange: (Int) -> Void
     let onGenderChange: (ProfileGender) -> Void
@@ -234,11 +238,13 @@ private struct ContainerSettings: View {
                     gender: gender,
                     unit: unit,
                     hasDisplayNotch: hasDisplayNotch,
+                    fullScreenReminder: fullScreenReminder,
                     launchAtLogin: launchAtLogin,
                     onAgeChange: onAgeChange,
                     onGenderChange: onGenderChange,
                     onUnitChange: onUnitChange,
                     onDisplayNotchChange: onDisplayNotchChange,
+                    onFullScreenReminderChange: onFullScreenReminderChange,
                     onLaunchAtLoginChange: onLaunchAtLoginChange,
                     onTestNow: onTryNow
                 )
@@ -265,11 +271,13 @@ private struct PersonalOptions: View {
     let gender: ProfileGender
     let unit: VolumeUnit
     let hasDisplayNotch: Bool
+    let fullScreenReminder: Bool
     let launchAtLogin: Bool
     let onAgeChange: (Int) -> Void
     let onGenderChange: (ProfileGender) -> Void
     let onUnitChange: (VolumeUnit) -> Void
     let onDisplayNotchChange: (Bool) -> Void
+    let onFullScreenReminderChange: (Bool) -> Void
     let onLaunchAtLoginChange: (Bool) -> Void
     let onTestNow: () -> Void
 
@@ -324,6 +332,14 @@ private struct PersonalOptions: View {
                 isOn: Binding(
                     get: { hasDisplayNotch },
                     set: onDisplayNotchChange
+                )
+            )
+
+            Toggle(
+                "Full-screen reminder",
+                isOn: Binding(
+                    get: { fullScreenReminder },
+                    set: onFullScreenReminderChange
                 )
             )
 
