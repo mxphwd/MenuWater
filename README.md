@@ -7,7 +7,7 @@ Features:
 + Very lightweight
 + ~~Option to auto start at login~~
 
-The application is built and tested for macOS 26 Golden Gate on Apple Silicon Macs. Xcode target distribution is set to macOS 14.6 Sonoma or higher, with the build being universal (supporting both Apple Silicon and Intel). However, as it is not tested in older versions or an Intel-based Mac, your usage may vary.
+Built and tested on macOS 26 Golden Gate. Xcode distribution target is set to macOS 14.6 Sonoma or higher, and is tested on Sonoma. Although it is built as universal package (both Apple Silicon and Intel), it is not tested on Intel-based Macs and therefore your usage may vary.
 
 Before start using MenuWater, navigate to **Options** under the drop down menu to set you age and gender. The daily goal will be set according to how much a person your age should be drinking a day.
 
