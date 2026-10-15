@@ -4,7 +4,7 @@ Built for those who keep forgets to drink water during the day.
 
 Features:
 + Built natively for Apple Silicon
-+ Very lightweight
++ Very lightweight (500KB)
 + ~~Option to auto start at login~~
 
 Built and tested on macOS 26 Golden Gate. Xcode distribution target is set to macOS 14.6 Sonoma or higher, and is tested on Sonoma. Although it is built as universal package (both Apple Silicon and Intel), it is not tested on Intel-based Macs and therefore your usage may vary.
