@@ -5,8 +5,12 @@ import SwiftUI
 final class ReminderPresenter {
     private struct Presentation {
         let id: UUID
-        let panel: NSPanel
-        let movesVertically: Bool
+        let pillPanel: NSPanel
+        let dimmingPanel: NSPanel?
+
+        var panels: [NSPanel] {
+            [dimmingPanel, pillPanel].compactMap { $0 }
+        }
     }
 
     private enum Animation {
@@ -16,8 +20,6 @@ final class ReminderPresenter {
     }
 
     private var presentation: Presentation?
-    private var localKeyMonitor: Any?
-    private var globalKeyMonitor: Any?
 
     func show(hasDisplayNotch: Bool, fullScreen: Bool) {
         dismissImmediately()
@@ -25,39 +27,19 @@ final class ReminderPresenter {
         let contentSize = NSSize(width: 250, height: 50)
         let screen = NSScreen.main
         let compactFrame = NSRect(origin: .zero, size: contentSize)
-        let panelFrame = fullScreen ? (screen?.frame ?? compactFrame) : compactFrame
         let presentationID = UUID()
-        let panel = NSPanel(
-            contentRect: panelFrame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+        let dismissAction: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismiss(presentationID: presentationID)
+        }
+        let reminderPill = WaterReminderPill(onDismiss: dismissAction)
+        let pillPanel = makePanel(frame: compactFrame, ignoresMouseEvents: false)
+        pillPanel.contentView = SwipeHostingView(
+            rootView: reminderPill,
+            onSwipeUp: dismissAction
         )
-
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .floating
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isMovable = false
-        panel.ignoresMouseEvents = fullScreen
-
-        let reminderPill = WaterReminderPill { [weak self] in
-            self?.dismiss(presentationID: presentationID)
-        }
-
-        if fullScreen {
-            let menuBarHeight = screen.map { $0.frame.maxY - $0.visibleFrame.maxY } ?? 0
-            panel.contentView = NSHostingView(
-                rootView: FullScreenReminderOverlay(
-                    pill: reminderPill,
-                    topInset: menuBarHeight + (hasDisplayNotch ? 18 : 0)
-                )
-            )
-        } else {
-            panel.contentView = NSHostingView(rootView: reminderPill)
-        }
 
         let targetOrigin: NSPoint
         if let screen {
@@ -70,32 +52,39 @@ final class ReminderPresenter {
             targetOrigin = .zero
         }
 
-        if !fullScreen {
-            panel.setFrameOrigin(
-                NSPoint(
-                    x: targetOrigin.x,
-                    y: targetOrigin.y + Animation.verticalOffset
-                )
+        pillPanel.setFrameOrigin(
+            NSPoint(
+                x: targetOrigin.x,
+                y: targetOrigin.y + Animation.verticalOffset
             )
+        )
+        pillPanel.alphaValue = 0
+
+        let dimmingPanel: NSPanel?
+        if fullScreen, let screen {
+            let panel = makePanel(frame: screen.frame, ignoresMouseEvents: true)
+            panel.hasShadow = false
+            panel.contentView = NSHostingView(rootView: FullScreenDimmingOverlay())
+            panel.alphaValue = 0
+            dimmingPanel = panel
+        } else {
+            dimmingPanel = nil
         }
-        panel.alphaValue = 0
 
         presentation = Presentation(
             id: presentationID,
-            panel: panel,
-            movesVertically: !fullScreen
+            pillPanel: pillPanel,
+            dimmingPanel: dimmingPanel
         )
-        startEscapeMonitoring(presentationID: presentationID)
-        panel.orderFrontRegardless()
+        dimmingPanel?.orderFrontRegardless()
+        pillPanel.orderFrontRegardless()
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Animation.openingDuration
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().alphaValue = 1
-
-            if !fullScreen {
-                panel.animator().setFrameOrigin(targetOrigin)
-            }
+            dimmingPanel?.animator().alphaValue = 1
+            pillPanel.animator().alphaValue = 1
+            pillPanel.animator().setFrameOrigin(targetOrigin)
         }
     }
 
@@ -105,25 +94,25 @@ final class ReminderPresenter {
         }
 
         self.presentation = nil
-        stopEscapeMonitoring()
 
-        let panel = presentation.panel
+        let pillPanel = presentation.pillPanel
         let exitOrigin = NSPoint(
-            x: panel.frame.origin.x,
-            y: panel.frame.origin.y + Animation.verticalOffset
+            x: pillPanel.frame.origin.x,
+            y: pillPanel.frame.origin.y + Animation.verticalOffset
         )
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Animation.closingDuration
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            panel.animator().alphaValue = 0
-
-            if presentation.movesVertically {
-                panel.animator().setFrameOrigin(exitOrigin)
+            for panel in presentation.panels {
+                panel.animator().alphaValue = 0
             }
+            pillPanel.animator().setFrameOrigin(exitOrigin)
         } completionHandler: {
-            panel.orderOut(nil)
-            panel.contentView = nil
+            for panel in presentation.panels {
+                panel.orderOut(nil)
+                panel.contentView = nil
+            }
         }
     }
 
@@ -133,59 +122,75 @@ final class ReminderPresenter {
         }
 
         self.presentation = nil
-        stopEscapeMonitoring()
-        presentation.panel.contentView = nil
-        presentation.panel.orderOut(nil)
-    }
-
-    private func startEscapeMonitoring(presentationID: UUID) {
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
-            [weak self] event in
-            if event.keyCode == 53 {
-                self?.dismiss(presentationID: presentationID)
-            }
-
-            return event
-        }
-
-        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) {
-            [weak self] event in
-            guard event.keyCode == 53 else {
-                return
-            }
-
-            Task { @MainActor [weak self] in
-                self?.dismiss(presentationID: presentationID)
-            }
+        for panel in presentation.panels {
+            panel.contentView = nil
+            panel.orderOut(nil)
         }
     }
 
-    private func stopEscapeMonitoring() {
-        if let localKeyMonitor {
-            NSEvent.removeMonitor(localKeyMonitor)
-            self.localKeyMonitor = nil
-        }
+    private func makePanel(frame: NSRect, ignoresMouseEvents: Bool) -> NSPanel {
+        let panel = NSPanel(
+            contentRect: frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
 
-        if let globalKeyMonitor {
-            NSEvent.removeMonitor(globalKeyMonitor)
-            self.globalKeyMonitor = nil
-        }
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.level = .floating
+        panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isMovable = false
+        panel.ignoresMouseEvents = ignoresMouseEvents
+        return panel
+    }
+
+}
+
+private struct FullScreenDimmingOverlay: View {
+    var body: some View {
+        Color.black.opacity(0.50)
     }
 }
 
-private struct FullScreenReminderOverlay<Pill: View>: View {
-    let pill: Pill
-    let topInset: CGFloat
+private final class SwipeHostingView<Content: View>: NSHostingView<Content> {
+    private let onSwipeUp: () -> Void
+    private var verticalScrollDistance = 0.0
 
-    var body: some View {
-        ZStack(alignment: .top) {
-            Color.black.opacity(0.50)
+    init(rootView: Content, onSwipeUp: @escaping () -> Void) {
+        self.onSwipeUp = onSwipeUp
+        super.init(rootView: rootView)
+    }
 
-            pill
-                .frame(width: 250, height: 50)
-                .padding(.top, topInset)
+    @available(*, unavailable)
+    required init(rootView: Content) {
+        fatalError("init(rootView:) is unavailable")
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        if event.phase == .began {
+            verticalScrollDistance = 0
         }
-        .background(.clear)
+
+        let directionMultiplier = event.isDirectionInvertedFromDevice ? -1.0 : 1.0
+        verticalScrollDistance += event.scrollingDeltaY * directionMultiplier
+
+        if verticalScrollDistance > 18 {
+            verticalScrollDistance = 0
+            onSwipeUp()
+            return
+        }
+
+        if event.phase == .ended || event.phase == .cancelled {
+            verticalScrollDistance = 0
+        }
     }
 }
 
@@ -239,6 +244,14 @@ private struct WaterReminderPill: View {
         }
         .contentShape(Capsule())
         .onTapGesture(perform: onDismiss)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 8)
+                .onEnded { value in
+                    if value.translation.height < -18 {
+                        onDismiss()
+                    }
+                }
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Time to drink water. This reminder closes in ten seconds.")
         .task {
