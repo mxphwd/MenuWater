@@ -11,6 +11,7 @@ Built and tested on macOS 26 Golden Gate. Xcode distribution target is set to ma
 
 Before start using MenuWater, navigate to **Options** under the drop down menu to set you age and gender. The daily goal will be set according to how much a person your age should be drinking a day.
 
+Proof to you that this is not written with ChatGPT (if you could't already tell from numerous grammar errors), ILLIT <3
 ## Setup guide
 
 1. Download the [latest release](https://github.com/mxphwd/MenuWater/releases/).
