@@ -29,7 +29,7 @@ _Only in English_
 + There is a known bug that, in certain cases, having the "Start at login" option on may result in MenuWater crashing, leaving the icon visible on the menu bar but not open when clicked on. You can relaunch MenuWater by force quitting the application from the Force Quit menu(Opt+Cmd+Esc). The start at login option is therefore disabled by default to prevent this problem.
 + Users on macOS 27 Golden Gate using [HiddenBar](https://github.com/dwarvesf/hidden) may experience the menu bar icon disappearing as HiddenBar hides selected applications, even if MenuWater is specifically selected to be not hidden. This is a problem caused by new behavior macOS handles menu bar combined with updated HiddenBar to still provide the hiding feature. Although not tested, users on macOS 26 Tahoe or older will probably have no problem with this.
 
-Feel free to add more issues as you find them
+These are the only issues I have found so far. Feel free to add more issues as you find them.
 
 ## Update log
 
